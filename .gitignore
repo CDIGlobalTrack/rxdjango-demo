@@ -1,0 +1,65 @@
+# Ignore Python bytecode and related files
+*.py[cod]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+.eggs/
+
+# Ignore virtual environment directories
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+backend-env/
+
+# Ignore Django-specific files
+db.sqlite3
+media/
+staticfiles/
+*.log
+local_settings.py
+
+# Ignore coverage and test result files
+htmlcov/
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Ignore node_modules directory and related files
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Ignore build output directories
+build/
+dist/
+public/
+frontend/build/
+
+# Ignore IDE and editor-specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.iml
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+*.log
+
+# Ignore dotenv environment variable files
+.env
+.env.*
+
+# Ignore package lock files
+package-lock.json
+yarn.lock
