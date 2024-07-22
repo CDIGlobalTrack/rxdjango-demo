@@ -21,7 +21,7 @@ This repository contains a demo application built using Django, Django REST Fram
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/yourusername/rxdjango-demo.git
+   git clone https://github.com/CDIGlobalTrack/rxdjango-demo.git
    cd rxdjango-demo/backend
    ```
 
@@ -29,6 +29,10 @@ This repository contains a demo application built using Django, Django REST Fram
 
    ```bash
    python -m venv backend-env
+   ```
+   Depending on your environment, you may need to
+   ```bash
+   python3 -m venv backend-env
    ```
 
 3. **Activate the virtual environment**:

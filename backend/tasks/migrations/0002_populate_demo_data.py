@@ -4,7 +4,6 @@ from django.contrib.auth.hashers import make_password
 def populate_demo_data(apps, schema_editor):
     Project = apps.get_model('tasks', 'Project')
     Task = apps.get_model('tasks', 'Task')
-    Participant = apps.get_model('tasks', 'Participant')
     User = apps.get_model('tasks', 'User')
 
     # Create demo users
@@ -29,12 +28,6 @@ def populate_demo_data(apps, schema_editor):
     Task.objects.create(title='Demo Task 2', description='This is a demo task 2', completed=False, user=user1, project=project1)
     Task.objects.create(title='Demo Task 3', description='This is a demo task 3', completed=True, user=user2, project=project2)
     Task.objects.create(title='Demo Task 4', description='This is a demo task 4', completed=True, user=user2, project=project2)
-
-    # Create demo participants
-    Participant.objects.create(project=project1, user=user1)
-    Participant.objects.create(project=project1, user=user2)
-    Participant.objects.create(project=project2, user=user1)
-    Participant.objects.create(project=project2, user=user2)
 
 
 class Migration(migrations.Migration):

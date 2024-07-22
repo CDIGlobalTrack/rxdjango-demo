@@ -1,0 +1,28 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.wrapper > .container {
+  display: flex;
+  max-width: 900px;
+  flex-direction: column;
+}
+
+.container > ul {
+  width: 500px;
+  margin: 0;
+  padding: 0;
+}
+.container > ul > li {
+  display: grid;
+  grid-template-columns: 1fr 70px 70px;
+  border: 1px solid #ccc;
+  padding: 3px 5px;
+  :hover {
+    background-color: #f9f9f9;
+  }
+}
+.container > ul > li:hover {
+    background-color: #f9f9f9;
+  }
