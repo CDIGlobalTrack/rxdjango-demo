@@ -39,7 +39,6 @@ yarn-error.log
 # Ignore build output directories
 build/
 dist/
-public/
 frontend/build/
 
 # Ignore IDE and editor-specific files
