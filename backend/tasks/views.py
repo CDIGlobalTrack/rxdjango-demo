@@ -1,14 +1,12 @@
-from rest_framework import generics
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
-from .models import Project
-from .serializers import ProjectSerializer
+from .models import Project, Task, Participant
+from .serializers import ProjectSerializer, TaskSerializer, ParticipantSerializer
 
 
 class LoginView(APIView):
@@ -25,13 +23,49 @@ class LoginView(APIView):
             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProjectDetailView(generics.RetrieveAPIView):
+class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        project_id = kwargs.get('id')
+
+class TaskViewSet(viewsets.ModelViewSet):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        task = get_object_or_404(Task, id=self.kwargs['pk'])
+        if not (self.request.user == task.user or self.request.user.is_superuser):
+            return Response({"error": "You do not have permission to update this task."}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save(instance=task)
+
+    def destroy(self, request, *args, **kwargs):
+        task = get_object_or_404(Task, id=self.kwargs['pk'])
+        if not (request.user == task.user or request.user.is_superuser):
+            return Response({"error": "You do not have permission to delete this task."}, status=status.HTTP_403_FORBIDDEN)
+        task.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ParticipantViewSet(viewsets.ModelViewSet):
+    queryset = Participant.objects.all()
+    serializer_class = ParticipantSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        project_id = request.data.get('project')
         project = get_object_or_404(Project, id=project_id)
-        serializer = self.get_serializer(project)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if not (project.user == request.user or request.user.is_superuser):
+            return Response({"error": "You do not have permission to add participants to this project."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        participant = get_object_or_404(Participant, id=self.kwargs['pk'])
+        if not (participant.project.user == request.user or request.user.is_superuser):
+            return Response({"error": "You do not have permission to remove participants from this project."}, status=status.HTTP_403_FORBIDDEN)
+        participant.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
