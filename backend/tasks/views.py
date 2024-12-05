@@ -35,7 +35,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        project_id = self.request.data.get('project')
+        project = get_object_or_404(Project, id=project_id)
+        serializer.save(user=self.request.user, project=project)
 
     def perform_update(self, serializer):
         task = get_object_or_404(Task, id=self.kwargs['pk'])
