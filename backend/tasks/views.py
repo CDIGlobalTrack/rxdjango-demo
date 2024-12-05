@@ -5,8 +5,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
-from .models import Project, Task, Participant
-from .serializers import ProjectSerializer, TaskSerializer, ParticipantSerializer
+from .models import Project, Task
+from .serializers import ProjectSerializer, TaskSerializer
 
 
 class LoginView(APIView):
@@ -50,24 +50,4 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not (request.user == task.user or request.user.is_superuser):
             return Response({"error": "You do not have permission to delete this task."}, status=status.HTTP_403_FORBIDDEN)
         task.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class ParticipantViewSet(viewsets.ModelViewSet):
-    queryset = Participant.objects.all()
-    serializer_class = ParticipantSerializer
-    permission_classes = [IsAuthenticated]
-
-    def create(self, request, *args, **kwargs):
-        project_id = request.data.get('project')
-        project = get_object_or_404(Project, id=project_id)
-        if not (project.user == request.user or request.user.is_superuser):
-            return Response({"error": "You do not have permission to add participants to this project."}, status=status.HTTP_403_FORBIDDEN)
-        return super().create(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        participant = get_object_or_404(Participant, id=self.kwargs['pk'])
-        if not (participant.project.user == request.user or request.user.is_superuser):
-            return Response({"error": "You do not have permission to remove participants from this project."}, status=status.HTTP_403_FORBIDDEN)
-        participant.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
