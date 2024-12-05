@@ -30,6 +30,10 @@ This repository contains a demo application built using Django, Django REST Fram
    ```bash
    python -m venv backend-env
    ```
+   Depending on your environment, you may need to
+   ```bash
+   python3 -m venv backend-env
+   ```
 
 3. **Activate the virtual environment**:
 
