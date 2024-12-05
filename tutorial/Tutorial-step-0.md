@@ -1,6 +1,7 @@
 # RxDjango Tutorial Step 0: Existing application
 
-To start the tutorial, let's set up an existing Django + React application.
+To start the tutorial, let's create a Django + React application.
+At this step our goal is to setup a demo application without RxDjango
 We'll also setup ASGI, so that application is ready for RxDjango.
 If you want to speed up, checkout the __step-0__ tag of the repository
 and you should achieve the same result.
@@ -14,8 +15,8 @@ and you should achieve the same result.
 ## Create the demo project folder
 
    ```bash
-   mkdir rxdjango-demo
-   cd rxdjango-demo
+   mkdir rxdjango-tutorial
+   cd rxdjango-tutorial
    ```
 
 ## Backend (Django + Django REST Framework)
@@ -30,22 +31,22 @@ and you should achieve the same result.
 
 2. **Activate the virtual environment**:
 
+   - On Linux/macOS:
+
+     ```bash
+     source backend-env/bin/activate
+     ```
+
    - On Windows:
 
      ```bash
      backend-env\Scripts\activate
      ```
 
-   - On macOS/Linux:
-
-     ```bash
-     source backend-env/bin/activate
-     ```
-
 3. **Install Python dependencies**:
 
    ```bash
-   pip install django djangorestframework djangorestframework.authtoken
+   pip install django djangorestframework
    ```
 
 4. **Create a new Django project**:
@@ -74,7 +75,6 @@ and you should achieve the same result.
        'rest_framework',
        'rest_framework.authtoken',
        'tasks',
-       ...
    ]
    ```
 
@@ -91,7 +91,7 @@ and you should achieve the same result.
    }
    ```
 
-   Add `CORS middleware`:
+   Add `CORS middleware`, before CommonMiddleware:
 
    ```python
    MIDDLEWARE = [
@@ -106,7 +106,7 @@ and you should achieve the same result.
 
    ```python
    CORS_ALLOWED_ORIGINS = [
-       "http://localhost:3000",  # Add your React frontend URL here
+       "http://localhost:3000",
    ]
    ```
 
@@ -240,6 +240,23 @@ and you should achieve the same result.
    Create a `tasks/urls.py` file:
 
    ```python
+   from django.urls import path, include
+   from rest_framework.routers import DefaultRouter
+   from .views import ProjectViewSet, TaskViewSet, LoginView
+
+   router = DefaultRouter()
+   router.register(r'projects', ProjectViewSet, basename='project')
+   router.register(r'tasks', TaskViewSet, basename='task')
+
+   urlpatterns = [
+       path('login/', LoginView.as_view(), name='login'),
+       path('', include(router.urls)),
+   ]
+   ```
+
+   Edit `backend/urls.py` file to include tasks.urls:
+
+   ```python
    from django.contrib import admin
    from django.urls import path, include
 
@@ -274,7 +291,7 @@ Check that the backend server is running at `http://localhost:8000/`. You can ac
 
 ## Frontend (Typescript + React)
 
-Keep the backend running and open a new terminal at rxdjango-demo folder to start the frontend.
+Keep the backend running and open a new terminal at rxdjango-tutorial folder to start the frontend.
 
 ### 1. Create a React Project with TypeScript
 
