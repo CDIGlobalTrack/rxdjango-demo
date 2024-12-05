@@ -103,7 +103,7 @@ and you should achieve the same result.
    ```
 
    Configure the user model:
-   ```
+   ```python
    AUTH_USER_MODEL = "tasks.User"
    ```
 
