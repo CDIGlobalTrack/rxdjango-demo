@@ -37,15 +37,20 @@ interface Project {
 
 interface ProjectDetailProps {
   projectId: number;
+  token: string;
 }
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
+const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId, token }) => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState('');
   const [isEditing, setIsEditing] = useState<number>();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    axios.defaults.headers.common['Authorization'] = `Token ${token}`;
+  }, [token]);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -84,14 +89,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
         ...project!,
         tasks: [...project!.tasks, response.data],
       });
-      
+
       // Reset input
       setNewTask('');
     } catch (err) {
       alert('Error to create a task');
     }
   };
-  
+
   const deleteTask = async (taskId: number) => {
     try {
       // Delete a task
@@ -109,7 +114,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
       alert('Error to delete task');
     }
   };
-  
+
   const updateTask = async () => {
     try {
       // Update a task
@@ -156,7 +161,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
                   <input
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        setIsEditing(undefined) 
+                        setIsEditing(undefined)
                         updateTask()
                       }
                     }}

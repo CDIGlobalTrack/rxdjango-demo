@@ -8,7 +8,6 @@ const App: React.FC = () => {
 
   const handleLogin = (token: string) => {
     setToken(token);
-    axios.defaults.headers.common['Authorization'] = `Token ${token}`;
   };
 
   return (
@@ -20,7 +19,7 @@ const App: React.FC = () => {
         {!token ? (
           <Login onLogin={handleLogin} />
         ) : (
-          <ProjectDetail projectId={1} />
+          <ProjectDetail projectId={1} token={token} />
         )}
       </main>
     </div>
