@@ -46,7 +46,7 @@ and you should achieve the same result.
 3. **Install Python dependencies**:
 
    ```bash
-   pip install django djangorestframework
+   pip install django djangorestframework django-cors-headers
    ```
 
 4. **Create a new Django project**:
@@ -100,6 +100,11 @@ and you should achieve the same result.
        'django.middleware.common.CommonMiddleware',
        ...
    ]
+   ```
+
+   Configure the user model:
+   ```
+   AUTH_USER_MODEL = "tasks.User"
    ```
 
    Configure `CORS` settings:
@@ -262,7 +267,7 @@ and you should achieve the same result.
 
    urlpatterns = [
        path('admin/', admin.site.urls),
-       path('api/', include('tasks.urls')),  # Ensure this line includes the URLs from the tasks app
+       path('api/', include('tasks.urls')),
    ]
    ```
 
