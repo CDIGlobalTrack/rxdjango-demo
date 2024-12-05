@@ -131,17 +131,6 @@ and you should achieve the same result.
        def __str__(self):
            return self.name
 
-   class Participant(models.Model):
-       project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='participants')
-       user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='participants')
-       joined_at = models.DateTimeField(auto_now_add=True)
-
-       class Meta:
-           unique_together = ('project', 'user')
-
-       def __str__(self):
-           return f'{self.user.username} - {self.project.name}'
-
    class Task(models.Model):
        title = models.CharField(max_length=255)
        description = models.TextField(blank=True, null=True)
@@ -161,7 +150,7 @@ and you should achieve the same result.
 
    ```python
    from rest_framework import serializers
-   from .models import Project, Task, Participant, User
+   from .models import Project, Task, User
 
    class UserSerializer(serializers.ModelSerializer):
        class Meta:
@@ -175,21 +164,14 @@ and you should achieve the same result.
            model = Task
            fields = ['id', 'title', 'description', 'completed', 'user', 'created_at', 'updated_at']
 
-   class ParticipantSerializer(serializers.ModelSerializer):
-       user = UserSerializer(read_only=True)
-
-       class Meta:
-           model = Participant
-           fields = ['id', 'user', 'joined_at']
 
    class ProjectSerializer(serializers.ModelSerializer):
        tasks = TaskSerializer(many=True, read_only=True)
-       participants = ParticipantSerializer(many=True, read_only=True)
        user = UserSerializer(read_only=True)
 
        class Meta:
            model = Project
-           fields = ['id', 'name', 'description', 'user', 'tasks', 'participants', 'created_at', 'updated_at']
+           fields = ['id', 'name', 'description', 'user', 'tasks', 'created_at', 'updated_at']
    ```
 
 5. **Create views**:
@@ -197,17 +179,15 @@ and you should achieve the same result.
    Create a `tasks/views.py` file:
 
    ```python
-   from rest_framework import generics
+   from rest_framework import viewsets, status
    from rest_framework.response import Response
-   from rest_framework import status
    from rest_framework.authtoken.models import Token
-   from rest_framework.response import Response
    from rest_framework.views import APIView
    from rest_framework.permissions import IsAuthenticated, AllowAny
    from django.contrib.auth import authenticate
    from django.shortcuts import get_object_or_404
-   from .models import Project
-   from .serializers import ProjectSerializer
+   from .models import Project, Task
+   from .serializers import ProjectSerializer, TaskSerializer
 
 
    class LoginView(APIView):
@@ -224,17 +204,34 @@ and you should achieve the same result.
                return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-   class ProjectDetailView(generics.RetrieveAPIView):
+   class ProjectViewSet(viewsets.ModelViewSet):
        queryset = Project.objects.all()
        serializer_class = ProjectSerializer
        permission_classes = [IsAuthenticated]
 
-       def get(self, request, *args, **kwargs):
-           project_id = kwargs.get('id')
-           project = get_object_or_404(Project, id=project_id)
-           serializer = self.get_serializer(project)
-           return Response(serializer.data, status=status.HTTP_200_OK)
 
+   class TaskViewSet(viewsets.ModelViewSet):
+       queryset = Task.objects.all()
+       serializer_class = TaskSerializer
+       permission_classes = [IsAuthenticated]
+
+       def perform_create(self, serializer):
+           project_id = self.request.data.get('project')
+           project = get_object_or_404(Project, id=project_id)
+           serializer.save(user=self.request.user, project=project)
+
+       def perform_update(self, serializer):
+           task = get_object_or_404(Task, id=self.kwargs['pk'])
+           if not (self.request.user == task.user or self.request.user.is_superuser):
+               return Response({"error": "You do not have permission to update this task."}, status=status.HTTP_403_FORBIDDEN)
+           serializer.save(instance=task)
+
+       def destroy(self, request, *args, **kwargs):
+           task = get_object_or_404(Task, id=self.kwargs['pk'])
+           if not (request.user == task.user or request.user.is_superuser):
+               return Response({"error": "You do not have permission to delete this task."}, status=status.HTTP_403_FORBIDDEN)
+           task.delete()
+           return Response(status=status.HTTP_204_NO_CONTENT)
 
    ```
 
@@ -243,24 +240,12 @@ and you should achieve the same result.
    Create a `tasks/urls.py` file:
 
    ```python
-   from django.urls import path
-   from .views import ProjectDetailView, LoginView
-
-   urlpatterns = [
-       path('projects/<int:id>/', ProjectDetailView.as_view(), name='project-detail'),
-       path('login/', LoginView.as_view(), name='login'),
-   ]
-   ```
-
-   Edit `backend/urls.py` to include the app's URLs:
-
-   ```python
    from django.contrib import admin
    from django.urls import path, include
 
    urlpatterns = [
        path('admin/', admin.site.urls),
-       path('api/', include('tasks.urls')),  # Include the URLs from the tasks app
+       path('api/', include('tasks.urls')),  # Ensure this line includes the URLs from the tasks app
    ]
    ```
 
@@ -372,6 +357,7 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
    ```tsx
    import React, { useState, useEffect } from 'react';
    import axios from 'axios';
+   import './ProjectDetail.css';
 
    interface User {
      id: number;
@@ -408,18 +394,31 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
 
    interface ProjectDetailProps {
      projectId: number;
+     token: string;
    }
 
-   const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
+   const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId, token }) => {
      const [project, setProject] = useState<Project | null>(null);
      const [loading, setLoading] = useState(true);
+     const [newTask, setNewTask] = useState('');
+     const [editingTask, setEditingTask] = useState('');
+     const [isEditing, setIsEditing] = useState<number>();
      const [error, setError] = useState<string | null>(null);
+
+     useEffect(() => {
+       axios.defaults.headers.common['Authorization'] = `Token ${token}`;
+     }, [token]);
 
      useEffect(() => {
        const fetchProject = async () => {
          try {
+           // Get project by id
            const response = await axios.get<Project>(`http://localhost:8000/api/projects/${projectId}/`);
+
+           // Set complete project on state
            setProject(response.data);
+
+           // Stop loading
            setLoading(false);
          } catch (err) {
            if (axios.isAxiosError(err)) {
@@ -434,25 +433,113 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
        fetchProject();
      }, [projectId]);
 
+     const addTask = async () => {
+       try {
+         // Create a new task
+         const response = await axios.post<Task>(`http://localhost:8000/api/tasks/`, {
+           title: newTask,
+           project: projectId,
+         });
+
+         // Update project with new task locally
+         setProject({
+           ...project!,
+           tasks: [...project!.tasks, response.data],
+         });
+
+         // Reset input
+         setNewTask('');
+       } catch (err) {
+         alert('Error to create a task');
+       }
+     };
+
+     const deleteTask = async (taskId: number) => {
+       try {
+         // Delete a task
+         await axios.delete<Task>(`http://localhost:8000/api/tasks/${taskId}/`);
+
+         // Update project to delete task locally
+         setProject({
+           ...project!,
+           tasks: project!.tasks.filter((t: Task) => t.id !== taskId),
+         });
+
+         // Reset input
+         setNewTask('');
+       } catch (err) {
+         alert('Error to delete task');
+       }
+     };
+
+     const updateTask = async () => {
+       try {
+         // Update a task
+         const response = await axios.put<Task>(`http://localhost:8000/api/tasks/${isEditing}/`, {
+           title: editingTask,
+           project: projectId,
+         });
+
+         // Update project to update task locally
+         setProject({
+           ...project!,
+           tasks: project!.tasks.map((t: Task) => t.id !== isEditing ? t : response.data),
+         });
+
+         // Reset input
+         setNewTask('');
+       } catch (err) {
+         alert('Error to update task');
+       }
+     };
+
      if (loading) return <div>Loading...</div>;
      if (error) return <div>Error loading project: {error}</div>;
 
      return (
-       <div>
-         <h1>{project?.name}</h1>
-         <p>{project?.description}</p>
-         <h2>Tasks</h2>
-         <ul>
-           {project?.tasks.map(task => (
-             <li key={task.id}>{task.title}</li>
-           ))}
-         </ul>
-         <h2>Participants</h2>
-         <ul>
-           {project?.participants.map(participant => (
-             <li key={participant.id}>{participant.user.username}</li>
-           ))}
-         </ul>
+       <div className='wrapper'>
+         <div className='container'>
+           <h1>{project?.name}</h1>
+           <p>{project?.description}</p>
+           <div>
+             <input
+               onKeyDown={(e) => e.key === 'Enter' && addTask()}
+               onChange={({ target }) => setNewTask(target.value)}
+               value={newTask}
+             />
+             <button onClick={addTask}>Add Task</button>
+           </div>
+           <h2>Tasks</h2>
+           <ul>
+             {project?.tasks.map(task => (
+               <li key={task.id}>
+                 {
+                   isEditing === task.id ?
+                     <input
+                       onKeyDown={(e) => {
+                         if (e.key === 'Enter') {
+                           setIsEditing(undefined)
+                           updateTask()
+                         }
+                       }}
+                       value={editingTask}
+                       onChange={({ target }) => setEditingTask(target.value)}
+                     />
+                     : task.title
+                 }
+                 <button onClick={() => deleteTask(task!.id)}>delete</button>
+                 <button
+                   onClick={() => {
+                     setEditingTask(task!.title);
+                     isEditing === task.id ? setIsEditing(undefined) : setIsEditing(task.id);
+                   }}
+                 >
+                   edit
+                 </button>
+               </li>
+             ))}
+           </ul>
+         </div>
        </div>
      );
    };
@@ -460,7 +547,42 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
    export default ProjectDetail;
    ```
 
-### 5. Update App Component to Use ProjectDetail
+### 5. Some minimal css for ProjectDetail
+
+   Let's have a minimal css for out project page. Edit src/components/ProjectDetail.css:
+
+   ```css
+   .wrapper {
+     display: flex;
+     justify-content: center;
+     align-items: center;
+   }
+   .wrapper > .container {
+     display: flex;
+     max-width: 900px;
+     flex-direction: column;
+   }
+
+   .container > ul {
+     width: 500px;
+     margin: 0;
+     padding: 0;
+   }
+   .container > ul > li {
+     display: grid;
+     grid-template-columns: 1fr 70px 70px;
+     border: 1px solid #ccc;
+     padding: 3px 5px;
+     :hover {
+       background-color: #f9f9f9;
+     }
+   }
+   .container > ul > li:hover {
+       background-color: #f9f9f9;
+   }
+   ```
+
+### 6. Update App Component to Use ProjectDetail
 
    Edit the `src/App.tsx` file to include the `ProjectDetail` and `Login` components:
 
@@ -475,7 +597,6 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
 
      const handleLogin = (token: string) => {
        setToken(token);
-       axios.defaults.headers.common['Authorization'] = `Token ${token}`;
      };
 
      return (
@@ -487,7 +608,7 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
            {!token ? (
              <Login onLogin={handleLogin} />
            ) : (
-             <ProjectDetail projectId={1} />
+             <ProjectDetail projectId={1} token={token} />
            )}
          </main>
        </div>
@@ -497,13 +618,13 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
    export default App;
    ```
 
-### 6. Run the React Application
+### 7. Run the React Application
 
    ```bash
    npm start
    ```
 
-### 7. Access the Frontend
+### 8. Access the Frontend
 
 The frontend development server will be running at `http://localhost:3000/`. Open this URL in your browser to see the application in action.
 Ensure both the backend and frontend servers are running simultaneously to access the full functionality of the application.
