@@ -1,7 +1,13 @@
-from django.urls import path
-from .views import ProjectDetailView, LoginView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ProjectViewSet, TaskViewSet, ParticipantViewSet, LoginView
+
+router = DefaultRouter()
+router.register(r'projects', ProjectViewSet, basename='project')
+router.register(r'tasks', TaskViewSet, basename='task')
+router.register(r'participants', ParticipantViewSet, basename='participant')
 
 urlpatterns = [
-    path('projects/<int:id>/', ProjectDetailView.as_view(), name='project-detail'),
     path('login/', LoginView.as_view(), name='login'),
+    path('', include(router.urls)),
 ]
