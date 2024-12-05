@@ -102,7 +102,7 @@ and you should achieve the same result.
    ]
    ```
 
-   Configure the user model:
+   Configure the user model (we'll define it in next step):
    ```python
    AUTH_USER_MODEL = "tasks.User"
    ```
