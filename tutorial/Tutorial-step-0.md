@@ -331,13 +331,13 @@ and you should achieve the same result.
    python manage.py migrate
    ```
 
-10. **Create a superuser (optional)**:
+9. **Create a superuser (optional)**:
 
    ```bash
    python manage.py createsuperuser
    ```
 
-11. **Start the backend server**:
+9. **Start the backend server**:
 
    ```bash
    python manage.py runserver
