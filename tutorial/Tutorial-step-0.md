@@ -309,7 +309,12 @@ Keep the backend running and open a new terminal at rxdjango-demo folder to star
 
 ### 3. Create a Login Component
 
-   Create a file named `Login.tsx` inside the `src/components` directory:
+   Create a directory `src/components`:
+   ```bash
+   mkdir src/components
+   ```
+
+   Create a file named `Login.tsx` inside `src/components`:
 
    ```tsx
    import React, { useState } from 'react';
